@@ -147,15 +147,18 @@ public class ProductServiceTest {
 
     @Test
     @Order(5)
-    public void testDeleteProductById(){
+    public void testDeleteProductById() {
         String id = "id1";
 
-        productService.deleteProductById(id);
+        Mockito.when(productRepository.existsById(id)).thenReturn(true);
+        ApiResponse response = productService.deleteProductById(id);
 
-        Mockito.verify(productRepository,Mockito.times(1)).deleteById(id);
+        assertNotNull(response);
+        assertEquals("Product deleted successfully", response.getMessage());
+        assertEquals(HttpStatus.OK.value(), response.getStatus());
+        Mockito.verify(productRepository, Mockito.times(1)).deleteById(id);
 
     }
-
 
 
 }

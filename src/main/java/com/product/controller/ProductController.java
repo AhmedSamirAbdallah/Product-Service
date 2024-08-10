@@ -3,6 +3,7 @@ package com.product.controller;
 import com.product.model.dto.ApiResponse;
 import com.product.model.dto.ProductRequestDto;
 import com.product.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ApiResponse createProduct(@RequestBody ProductRequestDto request) {
+    public ApiResponse createProduct(@Valid @RequestBody ProductRequestDto request) {
         return productService.createProduct(request);
     }
 
@@ -42,8 +43,8 @@ public class ProductController {
 
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
-    public void deleteProductById(@RequestParam String id) {
-        productService.deleteProductById(id);
+    public ApiResponse deleteProductById(@RequestParam String id) {
+        return productService.deleteProductById(id);
     }
 
 

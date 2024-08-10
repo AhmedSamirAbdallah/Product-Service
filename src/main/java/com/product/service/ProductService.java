@@ -22,6 +22,9 @@ public class ProductService {
     }
 
     public ApiResponse createProduct(ProductRequestDto request) {
+        if (request.name() == null || request.description() == null || request.price() == null) {
+            return ApiResponse.ok("", "Invalid request data", HttpStatus.BAD_REQUEST.value());
+        }
 
         Product product = Product.builder()
                 .name(request.name())
@@ -30,28 +33,34 @@ public class ProductService {
 
         product = productRepository.save(product);
 
-        return ApiResponse.ok(product,"Product Created Successfully",HttpStatus.CREATED.value());
+        return ApiResponse.ok(product, "Product Created Successfully", HttpStatus.CREATED.value());
     }
 
     public ApiResponse getAllProducts() {
+        List<Product> products = productRepository.findAll();
+        if (products.isEmpty()) {
+            return ApiResponse.ok(List.of(), "No product found", HttpStatus.OK.value());
+        }
 
-        List<ProductResponseDto> products = productRepository.findAll()
-                .stream()
+        List<ProductResponseDto> productResponseDtoList = products.stream()
                 .map(product -> new ProductResponseDto(product.getId(), product.getName(), product.getDescription(), product.getPrice()))
                 .toList();
 
-        return ApiResponse.ok(products,"success",HttpStatus.OK.value());
+        return ApiResponse.ok(productResponseDtoList, "success", HttpStatus.OK.value());
     }
 
     public ApiResponse getProductById(String id) {
 
         Product product = productRepository.findById(id).orElse(null);
+        if (product == null) {
+            return ApiResponse.ok("", "Product not found", HttpStatus.OK.value());
+        }
         ProductResponseDto productResponseDto = new ProductResponseDto(product.getId(),
                 product.getName(),
                 product.getDescription(),
                 product.getPrice());
 
-        return ApiResponse.ok(productResponseDto,"success",HttpStatus.OK.value());
+        return ApiResponse.ok(productResponseDto, "success", HttpStatus.OK.value());
 
     }
 
@@ -59,7 +68,10 @@ public class ProductService {
 
         Product product = productRepository.findById(id).orElse(null);
 
-        if (product == null) return null;
+        if (product == null) {
+            return ApiResponse.ok("", "Product not found", HttpStatus.OK.value());
+        }
+
         if (request.name() != null) product.setName(request.name());
         if (request.description() != null) product.setDescription(request.description());
         if (request.price() != null) product.setPrice(request.price());
@@ -71,13 +83,21 @@ public class ProductService {
                 product.getDescription(),
                 product.getPrice());
 
-        return ApiResponse.ok(productResponseDto,"Product Updated Successfully",HttpStatus.OK.value());
+        return ApiResponse.ok(productResponseDto, "Product Updated Successfully", HttpStatus.OK.value());
 
     }
 
-    public void deleteProductById(String id) {
+    public ApiResponse deleteProductById(String id) {
 
-        productRepository.deleteById(id);
+        if (productRepository.existsById(id)) {
+
+            productRepository.deleteById(id);
+            return ApiResponse.ok("", "Product deleted successfully", HttpStatus.OK.value());
+
+        }
+
+        return ApiResponse.ok("", "Product not found", HttpStatus.NOT_FOUND.value());
+
     }
 
 
