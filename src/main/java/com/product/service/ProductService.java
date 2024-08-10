@@ -64,9 +64,7 @@ public class ProductService {
         if (request.description() != null) product.setDescription(request.description());
         if (request.price() != null) product.setPrice(request.price());
 
-        productRepository.save(product);
-
-        product = productRepository.findById(id).orElse(null);
+        product = productRepository.save(product);
 
         ProductResponseDto productResponseDto = new ProductResponseDto(product.getId(),
                 product.getName(),
