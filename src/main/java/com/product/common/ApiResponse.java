@@ -35,7 +35,7 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> error(String message, HttpStatus httpStatus) {
         return ApiResponse.<T>builder()
                 .payload(null)
-                .message(null)
+                .message(message)
                 .httpStatus(httpStatus)
                 .build();
     }

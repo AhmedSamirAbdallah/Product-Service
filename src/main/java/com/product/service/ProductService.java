@@ -1,10 +1,12 @@
 package com.product.service;
 
+import com.product.exception.BusinessException;
 import com.product.mapper.ProductMapper;
 import com.product.model.dto.ProductRequestDto;
 import com.product.model.dto.ProductResponseDto;
 import com.product.model.entity.Product;
 import com.product.repository.ProductRepository;
+import com.product.util.ApiResponseMessages;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,9 +26,17 @@ public class ProductService {
     }
 
     public ProductResponseDto createProduct(ProductRequestDto request) {
+        if (productRepository.existsByName(request.name())) {
+            throw new BusinessException(ApiResponseMessages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_GATEWAY);
+        }
+
+        if (productRepository.existsByCode(request.code())) {
+            throw new BusinessException(ApiResponseMessages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_GATEWAY);
+        }
 
         Product product = Product.builder()
                 .name(request.name())
+                .code(request.code())
                 .description(request.description())
                 .price(request.price()).build();
 

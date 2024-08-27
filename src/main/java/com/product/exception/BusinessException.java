@@ -5,11 +5,13 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
 public class BusinessException extends RuntimeException {
-    private HttpStatus httpStatus;
+    private final HttpStatus httpStatus;
+
+    public BusinessException(String message, HttpStatus httpStatus) {
+        super(message);
+        this.httpStatus = httpStatus;
+    }
 
 
 }

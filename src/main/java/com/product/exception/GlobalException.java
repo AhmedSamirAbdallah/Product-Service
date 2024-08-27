@@ -27,6 +27,11 @@ public class GlobalException {
         return ApiResponse.error(errors, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(BusinessException.class)
+    public ApiResponse handelBusinessException(BusinessException ex) {
+        return ApiResponse.error(ex.getMessage(), HttpStatus.BAD_GATEWAY);
+    }
+
     @ExceptionHandler(ValidationException.class)
     public void handelValidationException(ValidationException ex) {
 
