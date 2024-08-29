@@ -18,10 +18,10 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
-    private KafkaTemplate<String, ProductResponseDto> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Autowired
-    ProductService(ProductRepository productRepository, ProductMapper productMapper, KafkaTemplate<String, ProductResponseDto> kafkaTemplate) {
+    ProductService(ProductRepository productRepository, ProductMapper productMapper, KafkaTemplate<String, Object> kafkaTemplate) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
         this.kafkaTemplate = kafkaTemplate;
@@ -40,7 +40,9 @@ public class ProductService {
                 .name(request.name())
                 .code(request.code())
                 .description(request.description())
-                .price(request.price()).build();
+                .price(request.price())
+                .build();
+
         kafkaTemplate.send(KafkaTopics.PRODUCT_CREATED_EVENT, productMapper.toProductResponseDto(product));
 
         return productMapper.toProductResponseDto(productRepository.save(product));
