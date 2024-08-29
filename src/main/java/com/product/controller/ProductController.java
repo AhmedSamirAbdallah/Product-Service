@@ -27,27 +27,25 @@ public class ProductController {
         return ApiResponse.success(productService.createProduct(request), ApiResponseMessages.PRODUCT_CREATED_SUCCESS, HttpStatus.CREATED);
     }
 
-//    @GetMapping
-//    public ApiResponse getProducts() {
-//        return productService.getAllProducts();
-//    }
-//
-//    @GetMapping(path = "/{id}")
-//    public ApiResponse getProductById(@PathVariable String id) {
-//        return productService.getProductById(id);
-//    }
-//
-//    @PatchMapping("/{id}")
-//    public ApiResponse updateById(@PathVariable String id, @RequestBody ProductRequestDto request) {
-//        return productService.updateById(id, request);
-//    }
-//
-//
-//    @DeleteMapping
-//    @ResponseStatus(HttpStatus.OK)
-//    public ApiResponse deleteProductById(@RequestParam String id) {
-//        return productService.deleteProductById(id);
-//    }
+    @GetMapping
+    public ApiResponse getProducts() {
+        return ApiResponse.success(productService.getAllProducts(), ApiResponseMessages.PRODUCTS_RETRIEVED_SUCCESSFULLY, HttpStatus.OK);
+    }
+
+    @GetMapping(path = "/{id}")
+    public ApiResponse getProductById(@PathVariable String id) {
+        return ApiResponse.success(productService.getProductById(id), ApiResponseMessages.PRODUCT_RETRIEVED_SUCCESSFULLY, HttpStatus.OK);
+    }
+
+    @PutMapping(path = "/{id}")
+    public ApiResponse updateById(@PathVariable String id, @RequestBody ProductRequestDto request) {
+        return ApiResponse.success(productService.updateById(id, request), ApiResponseMessages.PRODUCT_UPDATED_SUCCESSFULLY, HttpStatus.OK);
+    }
+
+    @DeleteMapping(path = "/{id}")
+    public ApiResponse deleteProductById(@PathVariable String id) {
+        return ApiResponse.success(productService.deleteProductById(id), ApiResponseMessages.PRODUCT_DELETED_SUCCESSFULLY, HttpStatus.OK);
+    }
 
 
 }

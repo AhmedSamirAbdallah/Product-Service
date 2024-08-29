@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class ProductService {
 
@@ -28,6 +31,7 @@ public class ProductService {
     }
 
     public ProductResponseDto createProduct(ProductRequestDto request) {
+
         if (productRepository.existsByName(request.name())) {
             throw new BusinessException(ApiResponseMessages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_GATEWAY);
         }
@@ -48,69 +52,65 @@ public class ProductService {
         return productMapper.toProductResponseDto(productRepository.save(product));
     }
 
-//    public ApiResponse getAllProducts() {
-//        List<Product> products = productRepository.findAll();
-//        if (products.isEmpty()) {
-//            return ApiResponse.ok(List.of(), "No product found", HttpStatus.OK.value());
-//        }
-//
-//        List<ProductResponseDto> productResponseDtoList = products.stream()
-//                .map(product -> new ProductResponseDto(product.getId(), product.getName(), product.getDescription(), product.getPrice()))
-//                .toList();
-//
-//        return ApiResponse.ok(productResponseDtoList, "success", HttpStatus.OK.value());
-//    }
-//
-//    public ApiResponse getProductById(String id) {
-//
-//        Product product = productRepository.findById(id).orElse(null);
-//        if (product == null) {
-//            return ApiResponse.ok("", "Product not found", HttpStatus.OK.value());
-//        }
-//        ProductResponseDto productResponseDto = new ProductResponseDto(product.getId(),
-//                product.getName(),
-//                product.getDescription(),
-//                product.getPrice());
-//
-//        return ApiResponse.ok(productResponseDto, "success", HttpStatus.OK.value());
-//
-//    }
-//
-//    public ApiResponse updateById(String id, ProductRequestDto request) {
-//
-//        Product product = productRepository.findById(id).orElse(null);
-//
-//        if (product == null) {
-//            return ApiResponse.ok("", "Product not found", HttpStatus.OK.value());
-//        }
-//
-//        if (request.name() != null) product.setName(request.name());
-//        if (request.description() != null) product.setDescription(request.description());
-//        if (request.price() != null) product.setPrice(request.price());
-//
-//        product = productRepository.save(product);
-//
-//        ProductResponseDto productResponseDto = new ProductResponseDto(product.getId(),
-//                product.getName(),
-//                product.getDescription(),
-//                product.getPrice());
-//
-//        return ApiResponse.ok(productResponseDto, "Product Updated Successfully", HttpStatus.OK.value());
-//
-//    }
-//
-//    public ApiResponse deleteProductById(String id) {
-//
-//        if (productRepository.existsById(id)) {
-//
-//            productRepository.deleteById(id);
-//            return ApiResponse.ok("", "Product deleted successfully", HttpStatus.OK.value());
-//
-//        }
-//
-//        return ApiResponse.ok("", "Product not found", HttpStatus.NOT_FOUND.value());
-//
-//    }
+    public List<ProductResponseDto> getAllProducts() {
+
+        List<Product> products = productRepository.findAll();
+        if (products.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return products.stream()
+                .map(productMapper::toProductResponseDto)
+                .toList();
+    }
+
+    private Product getProduct(String id) {
+        return productRepository.findById(id).orElseThrow(() -> new BusinessException(ApiResponseMessages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND));
+    }
+
+    public ProductResponseDto getProductById(String id) {
+
+
+        Product product = getProduct(id);
+
+        return productMapper.toProductResponseDto(product);
+
+    }
+
+    public ProductResponseDto updateById(String id, ProductRequestDto request) {
+
+        Product product = getProduct(id);
+
+        if (request.name() != null && !request.name().equals(product.getName())
+                && productRepository.existsByName(request.name())) {
+            throw new BusinessException(ApiResponseMessages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (request.code() != null && !request.code().equals(product.getCode())
+                && productRepository.existsByCode(request.code())) {
+            throw new BusinessException(ApiResponseMessages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_REQUEST);
+        }
+
+        if (request.name() != null) product.setName(request.name());
+        if (request.code() != null) product.setCode(request.code());
+        if (request.description() != null) product.setDescription(request.description());
+        if (request.price() != null) product.setPrice(request.price());
+
+        product = productRepository.save(product);
+
+        return productMapper.toProductResponseDto(product);
+    }
+
+    public String deleteProductById(String id) {
+
+        if (!productRepository.existsById(id)) {
+            throw new BusinessException(ApiResponseMessages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND);
+        }
+
+        productRepository.deleteById(id);
+
+        return "Product deleted successfully";
+    }
 
 
 }
