@@ -7,22 +7,24 @@ import com.product.model.dto.ProductResponseDto;
 import com.product.model.entity.Product;
 import com.product.repository.ProductRepository;
 import com.product.util.ApiResponseMessages;
+import com.product.util.KafkaTopics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
+    private KafkaTemplate<String, ProductResponseDto> kafkaTemplate;
 
     @Autowired
-    ProductService(ProductRepository productRepository, ProductMapper productMapper) {
+    ProductService(ProductRepository productRepository, ProductMapper productMapper, KafkaTemplate<String, ProductResponseDto> kafkaTemplate) {
         this.productRepository = productRepository;
         this.productMapper = productMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public ProductResponseDto createProduct(ProductRequestDto request) {
@@ -39,6 +41,7 @@ public class ProductService {
                 .code(request.code())
                 .description(request.description())
                 .price(request.price()).build();
+        kafkaTemplate.send(KafkaTopics.PRODUCT_CREATED_EVENT, productMapper.toProductResponseDto(product));
 
         return productMapper.toProductResponseDto(productRepository.save(product));
     }

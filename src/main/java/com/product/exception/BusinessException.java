@@ -1,8 +1,5 @@
 package com.product.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 public class BusinessException extends RuntimeException {
