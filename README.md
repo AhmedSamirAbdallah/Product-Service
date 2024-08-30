@@ -1,92 +1,90 @@
+
 # Product Service
 
 ## Overview
 
-The **Product Service** is a core component of our e-commerce platform, responsible for managing product-related operations. Built with Java Spring Boot, it uses MongoDB for data storage, Redis for caching, and Kafka for event streaming. The service is containerized using Docker for easy deployment.
+The **Product Service** is a key component of our e-commerce platform, managing product-related operations. Built with Java Spring Boot, it integrates with MongoDB for data storage, Redis for caching, and Kafka for event streaming. The service is containerized using Docker for simplified deployment.
 
 ## Technology Stack
 
-- **Java Spring Boot**: Framework for building the microservice.
-- **MongoDB**: NoSQL database for persistent storage.
-- **Redis**: In-memory cache to enhance performance.
+- **Java Spring Boot**: Framework for developing the microservice.
+- **MongoDB**: NoSQL database for persistent data storage.
+- **Redis**: In-memory cache for improved performance.
 - **Kafka**: Event streaming platform for inter-service communication.
 - **Docker**: Containerization for easy deployment and management.
 
 ## Key Features
 
-- **Add Product**: Validates, saves, and caches new products. Publishes `ProductAddedEvent` to Kafka.
-- **Update Product**: Updates product details, caches the updated data, and publishes `ProductUpdatedEvent`.
-- **Delete Product**: Removes products from the database and cache, publishes `ProductDeletedEvent`.
-- **Retrieve Product**: Fetches product details from cache or database.
+- **Add Product**: Validate, save, and cache new products; publish `ProductAddedEvent` to Kafka.
+- **Update Product**: Update product details, cache updated data, and publish `ProductUpdatedEvent`.
+- **Delete Product**: Remove products from database and cache; publish `ProductDeletedEvent`.
+- **Retrieve Product**: Fetch product details from cache or database.
 
 ## Docker Setup
 
-To run the Product Service and its dependencies using Docker, follow these steps:
+To deploy the Product Service and its dependencies using Docker, follow these steps:
 
-### Docker Compose Configuration
+### Starting Services
 
-The Docker Compose configuration sets up all necessary services:
+1. **Ensure Docker and Docker Compose are installed.**
+2. **Navigate to the directory containing your `docker-compose.yml` file.**
+3. **Run the following command to build and start the containers:**
 
-```yaml
-version: '3.8'
+   ```bash
+   docker-compose up --build
 
-services:
-  zookeeper:
-    image: zookeeper:3.5
-    container_name: zookeeper
-    ports:
-      - "2181:2181"
-    networks:
-      - kafka-network
 
-  kafka:
-    image: confluentinc/cp-kafka:latest
-    container_name: kafka
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    depends_on:
-      - zookeeper
-    networks:
-      - kafka-network
+## Running the Product Service
 
-  mongodb:
-    image: mongo:latest
-    container_name: mongo-db
-    ports:
-      - "27017:27017"
-    networks:
-      - mongo-network
+1.  **Verify Service Startup:**
+    
+    -   Ensure that all services are running correctly. You can check the status of your containers using:
+        
+		   ```bash
+		   docker-compose ps
 
-  mongo-express:
-    image: mongo-express:latest
-    container_name: mongo-express
-    ports:
-      - "8081:8081"
-    environment:
-      - ME_CONFIG_MONGODB_SERVER=mongo-db
-      - ME_CONFIG_BASICAUTH_USERNAME=admin
-      - ME_CONFIG_BASICAUTH_PASSWORD=admin
-    depends_on:
-      - mongodb
-    networks:
-      - mongo-network
+2.  **Accessing Services:**
 
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-    networks:
-      - redis-network
+	-   **Product Service**: Available at `http://localhost:8082`
+	-   **Mongo Express**: Access MongoDB through a web-based interface at `http://localhost:8081`
+	-   **Zookeeper**: Manage Kafka service at `localhost:2181`
+	-   **Kafka**: Messaging system available at `localhost:9092`
 
-networks:
-    kafka-network:
-      driver: bridge
-    mongo-network:
-      driver: bridge
-    redis-network:
-      driver: bridge
+
+3.  **API Endpoints:**
+	 -   **Add Product**: `POST /products`
+	-   **Update Product**: `PUT /products/{id}`
+	-   **Delete Product**: `DELETE /products/{id}`
+	-   **Retrieve Product**: `GET /products/{id}`
+
+4. **Example API Calls:**
+-   **Add Product**:
+	 
+		curl -X POST http://localhost:8082/api/products -H "Content-Type: application/json" -d 
+		'{
+			"name":"Iphone 15 pro",
+			"code":"code5",
+			"description":"Mobile Phone",
+			"price":2200
+		}'
+
+   
+-   **Update Product**:
+   
+		  curl -X PUT http://localhost:8082/api/products/60c72b2f5b4e1c6e3f8d4f75 -H "Content-Type: application/json" -d
+		'{
+			"name":  "Iphone 12 pro",
+			"code":  "code3",
+			"description":  "Mobile Phone",
+			"price":  2200
+		}'
+
+    
+-   **Delete Product**:
+    
+		   curl -X DELETE http://localhost:8082/api/products/60c72b2f5b4e1c6e3f8d4f75
+
+    
+-   **Retrieve Product**:
+    
+		  curl -X GET http://localhost:8082/api/products/60c72b2f5b4e1c6e3f8d4f75
