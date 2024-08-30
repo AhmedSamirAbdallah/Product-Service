@@ -2,58 +2,91 @@
 
 ## Overview
 
-The **Product Service** is a central component of our e-commerce platform, designed to manage all product-related operations. Built using Java with Spring Boot, this service integrates with MongoDB, Redis, and Kafka to handle product data efficiently and support event-driven communication.
+The **Product Service** is a core component of our e-commerce platform, responsible for managing product-related operations. Built with Java Spring Boot, it uses MongoDB for data storage, Redis for caching, and Kafka for event streaming. The service is containerized using Docker for easy deployment.
 
 ## Technology Stack
 
-- **Java Spring Boot**: Framework used for building the microservice with a focus on simplicity and rapid development.
-- **MongoDB**: NoSQL database used for persistent storage of product data.
-- **Redis**: In-memory data structure store used for caching product data to enhance performance and reduce database load.
-- **Kafka**: Distributed event streaming platform used for publishing and subscribing to product-related events, ensuring seamless communication with other services.
+- **Java Spring Boot**: Framework for building the microservice.
+- **MongoDB**: NoSQL database for persistent storage.
+- **Redis**: In-memory cache to enhance performance.
+- **Kafka**: Event streaming platform for inter-service communication.
+- **Docker**: Containerization for easy deployment and management.
 
 ## Key Features
 
-### Add Product
+- **Add Product**: Validates, saves, and caches new products. Publishes `ProductAddedEvent` to Kafka.
+- **Update Product**: Updates product details, caches the updated data, and publishes `ProductUpdatedEvent`.
+- **Delete Product**: Removes products from the database and cache, publishes `ProductDeletedEvent`.
+- **Retrieve Product**: Fetches product details from cache or database.
 
-- **Functionality**: Adds new products to the catalog.
-- **Workflow**:
-  1. Validates product information.
-  2. Saves the product to MongoDB.
-  3. Caches the product in Redis.
-  4. Publishes a `ProductAddedEvent` to Kafka.
+## Docker Setup
 
-### Update Product
+To run the Product Service and its dependencies using Docker, follow these steps:
 
-- **Functionality**: Updates details of existing products.
-- **Workflow**:
-  1. Validates updated information.
-  2. Updates the product in MongoDB.
-  3. Updates the cache in Redis.
-  4. Publishes a `ProductUpdatedEvent` to Kafka.
+### Docker Compose Configuration
 
-### Delete Product
+The Docker Compose configuration sets up all necessary services:
 
-- **Functionality**: Removes products from the catalog.
-- **Workflow**:
-  1. Checks if the product can be deleted.
-  2. Deletes the product from MongoDB.
-  3. Removes the product from Redis cache.
-  4. Publishes a `ProductDeletedEvent` to Kafka.
+```yaml
+version: '3.8'
 
-### Retrieve Product
+services:
+  zookeeper:
+    image: zookeeper:3.5
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    networks:
+      - kafka-network
 
-- **Functionality**: Fetches product details.
-- **Workflow**:
-  1. Retrieves product data from Redis cache if available.
-  2. If not in cache, fetches from MongoDB and updates the cache.
-  
-## Scheduling
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - kafka-network
 
-- **Cache Update**: A scheduled task updates the product cache every 2 hours to ensure data freshness. This is managed using Spring's `@Scheduled` annotation.
+  mongodb:
+    image: mongo:latest
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-network
 
-## Setup and Configuration
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_SERVER=mongo-db
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+    depends_on:
+      - mongodb
+    networks:
+      - mongo-network
 
-1. **Clone the Repository**:
-   ```bash
-   git clone <repository-url>
-   cd product-service
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - redis-network
+
+networks:
+    kafka-network:
+      driver: bridge
+    mongo-network:
+      driver: bridge
+    redis-network:
+      driver: bridge
