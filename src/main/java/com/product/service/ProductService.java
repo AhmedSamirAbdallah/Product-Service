@@ -6,13 +6,16 @@ import com.product.model.dto.ProductRequestDto;
 import com.product.model.dto.ProductResponseDto;
 import com.product.model.entity.Product;
 import com.product.repository.ProductRepository;
-import com.product.util.ApiResponseMessages;
+import com.product.util.Messages;
 import com.product.util.KafkaTopics;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class ProductService {
 
+    private static final Logger logger = LoggerFactory.getLogger(ProductService.class);
     private final ProductRepository productRepository;
     private final ProductMapper productMapper;
     private final KafkaTemplate<String, Object> kafkaTemplate;
@@ -29,9 +33,6 @@ public class ProductService {
 
     @Value("${redis.cache.ttl}")
     private Long timeToLive;
-
-    private static final String PRODUCT_CACHE_KEY_PREFIX = "product:";
-
 
     @Autowired
     ProductService(ProductRepository productRepository, ProductMapper productMapper, KafkaTemplate<String, Object> kafkaTemplate, RedisTemplate<String, Object> redisTemplate) {
@@ -44,11 +45,11 @@ public class ProductService {
     public ProductResponseDto createProduct(ProductRequestDto request) {
 
         if (productRepository.existsByName(request.name())) {
-            throw new BusinessException(ApiResponseMessages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_REQUEST);
+            throw new BusinessException(Messages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         if (productRepository.existsByCode(request.code())) {
-            throw new BusinessException(ApiResponseMessages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_REQUEST);
+            throw new BusinessException(Messages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         Product product = Product.builder()
@@ -60,7 +61,7 @@ public class ProductService {
 
         product = productRepository.save(product);
 
-        redisTemplate.opsForValue().set(PRODUCT_CACHE_KEY_PREFIX + product.getId(), product, timeToLive, TimeUnit.MINUTES);
+        redisTemplate.opsForValue().set(Messages.PRODUCT_CACHE_KEY_PREFIX + product.getId(), product, timeToLive, TimeUnit.MINUTES);
 
         ProductResponseDto responseDto = productMapper.toProductResponseDto(product);
 
@@ -69,12 +70,47 @@ public class ProductService {
         return responseDto;
     }
 
+    @Scheduled(cron = "${cache.update.cron}", zone = "${cache.update.zone}")
+    public void updateProductCache() {
+        try {
+            List<Product> products = productRepository.findAll();
+
+            if (!products.isEmpty()) {
+
+                redisTemplate.opsForValue().set(Messages.PRODUCTS_CACHE_KEY_PREFIX, products, timeToLive, TimeUnit.MINUTES);
+                logger.info(Messages.PRODUCTS_CACHED);
+
+            }
+            else
+            {
+                logger.info(Messages.NO_PRODUCTS_TO_CACHE);
+            }
+
+        } catch (Exception e)
+        {
+
+            logger.error(Messages.CACHE_UPDATE_ERROR, e);
+        }
+
+    }
+
     public List<ProductResponseDto> getAllProducts() {
 
+        List<Product> cachedProducts = (List<Product>) redisTemplate.opsForValue().get(Messages.PRODUCTS_CACHE_KEY_PREFIX);
+
+        if (cachedProducts != null && !cachedProducts.isEmpty()) {
+            return cachedProducts.stream()
+                    .map(productMapper::toProductResponseDto)
+                    .toList();
+        }
+
         List<Product> products = productRepository.findAll();
+
         if (products.isEmpty()) {
             return new ArrayList<>();
         }
+
+        redisTemplate.opsForValue().set(Messages.PRODUCTS_CACHE_KEY_PREFIX, products, timeToLive, TimeUnit.MINUTES);
 
         return products.stream()
                 .map(productMapper::toProductResponseDto)
@@ -82,7 +118,7 @@ public class ProductService {
     }
 
     private Product getProduct(String id) {
-        String cacheKey = PRODUCT_CACHE_KEY_PREFIX + id;
+        String cacheKey = Messages.PRODUCT_CACHE_KEY_PREFIX + id;
 
         Product cachedProduct = (Product) redisTemplate.opsForValue().get(cacheKey);
 
@@ -90,7 +126,7 @@ public class ProductService {
             return cachedProduct;
         }
 
-        Product product = productRepository.findById(id).orElseThrow(() -> new BusinessException(ApiResponseMessages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND));
+        Product product = productRepository.findById(id).orElseThrow(() -> new BusinessException(Messages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND));
 
         redisTemplate.opsForValue().set(cacheKey, product, timeToLive, TimeUnit.MINUTES);
 
@@ -112,12 +148,12 @@ public class ProductService {
 
         if (request.name() != null && !request.name().equals(product.getName())
                 && productRepository.existsByName(request.name())) {
-            throw new BusinessException(ApiResponseMessages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_REQUEST);
+            throw new BusinessException(Messages.PRODUCT_NAME_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         if (request.code() != null && !request.code().equals(product.getCode())
                 && productRepository.existsByCode(request.code())) {
-            throw new BusinessException(ApiResponseMessages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_REQUEST);
+            throw new BusinessException(Messages.PRODUCT_CODE_EXISTS, HttpStatus.BAD_REQUEST);
         }
 
         if (request.name() != null) product.setName(request.name());
@@ -127,7 +163,7 @@ public class ProductService {
 
         product = productRepository.save(product);
 
-        redisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + product.getId());
+        redisTemplate.delete(Messages.PRODUCT_CACHE_KEY_PREFIX + product.getId());
 
         ProductResponseDto responseDto = productMapper.toProductResponseDto(product);
 
@@ -139,7 +175,7 @@ public class ProductService {
     public ProductResponseDto deleteProductById(String id) {
 
         if (!productRepository.existsById(id)) {
-            throw new BusinessException(ApiResponseMessages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND);
+            throw new BusinessException(Messages.PRODUCT_NOT_FOUND, HttpStatus.NOT_FOUND);
         }
         Product product = getProduct(id);
 
@@ -147,7 +183,7 @@ public class ProductService {
 
         productRepository.deleteById(id);
 
-        redisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + id);
+        redisTemplate.delete(Messages.PRODUCT_CACHE_KEY_PREFIX + id);
         kafkaTemplate.send(KafkaTopics.PRODUCT_DELETED_EVENT, responseDto);
 
         return responseDto;
