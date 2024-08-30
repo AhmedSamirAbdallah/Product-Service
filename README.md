@@ -2,72 +2,54 @@
 
 ## Overview
 
-The Product Service is a crucial component of our e-commerce platform. It manages all operations related to products within the catalog, including adding new products, updating existing products, deleting products, and retrieving product information.
+The **Product Service** is a central component of our e-commerce platform, designed to manage all product-related operations. Built using Java with Spring Boot, this service integrates with MongoDB, Redis, and Kafka to handle product data efficiently and support event-driven communication.
 
-## Key Functions
+## Technology Stack
 
-### 1. Add Product
+- **Java Spring Boot**: Framework used for building the microservice with a focus on simplicity and rapid development.
+- **MongoDB**: NoSQL database used for persistent storage of product data.
+- **Redis**: In-memory data structure store used for caching product data to enhance performance and reduce database load.
+- **Kafka**: Distributed event streaming platform used for publishing and subscribing to product-related events, ensuring seamless communication with other services.
 
-**Purpose**: Enable the addition of new products to the catalog.
+## Key Features
 
-**Business Flow**:
-1. Receive a request to add a new product.
-2. Validate the product information (e.g., check for unique product name, ensure all required fields are populated).
-3. Persist the product data to the database.
-4. Publish a `ProductAddedEvent` to Kafka to notify other services (like Inventory and Order services) about the new product.
+### Add Product
 
-**Constraints**:
-- **Unique Name**: The product name must be unique within the catalog.
-- **Mandatory Fields**: Fields such as name, price, category, and SKU (Stock Keeping Unit) are mandatory.
+- **Functionality**: Adds new products to the catalog.
+- **Workflow**:
+  1. Validates product information.
+  2. Saves the product to MongoDB.
+  3. Caches the product in Redis.
+  4. Publishes a `ProductAddedEvent` to Kafka.
 
-### 2. Update Product
+### Update Product
 
-**Purpose**: Modify the details of an existing product.
+- **Functionality**: Updates details of existing products.
+- **Workflow**:
+  1. Validates updated information.
+  2. Updates the product in MongoDB.
+  3. Updates the cache in Redis.
+  4. Publishes a `ProductUpdatedEvent` to Kafka.
 
-**Business Flow**:
-1. Receive a request to update a product.
-2. Validate the updates (e.g., ensure the updated name is still unique).
-3. Persist the changes to the database.
-4. Publish a `ProductUpdatedEvent` to Kafka to notify other services of the changes.
+### Delete Product
 
-**Constraints**:
-- **Unique Name**: The updated product name must remain unique.
-- **Immutable Fields**: Certain fields, like product ID, should not be modifiable.
+- **Functionality**: Removes products from the catalog.
+- **Workflow**:
+  1. Checks if the product can be deleted.
+  2. Deletes the product from MongoDB.
+  3. Removes the product from Redis cache.
+  4. Publishes a `ProductDeletedEvent` to Kafka.
 
-### 3. Delete Product
+### Retrieve Product
 
-**Purpose**: Remove a product from the catalog.
+- **Functionality**: Fetches product details.
+- **Workflow**:
+  1. Retrieves product data from Redis cache if available.
+  2. If not in cache, fetches from MongoDB and updates the cache.
+  
+## Scheduling
 
-**Business Flow**:
-1. Receive a request to delete a product.
-2. Verify if the product can be deleted (e.g., ensure it’s not part of any active orders).
-3. Remove the product from the database.
-4. Publish a `ProductDeletedEvent` to Kafka to notify other services of the deletion.
-
-**Constraints**:
-- **Data Integrity**: Ensure that the deletion doesn’t violate any referential integrity, such as products that are still in active orders.
-
-### 4. Retrieve Product
-
-**Purpose**: Fetch product details.
-
-**Business Flow**:
-1. Receive a request to retrieve product information.
-2. Query the database for the product details.
-3. Return the product details to the requester.
-
-**Constraints**:
-- **Search Flexibility**: Support various query parameters like product ID, name, category, etc.
-
-## Integration
-
-### Kafka
-
-- **Event Publishing**: When a product is added, updated, or deleted, corresponding events (`ProductAddedEvent`, `ProductUpdatedEvent`, `ProductDeletedEvent`) are published to Kafka. This ensures that other services like Inventory and Order Services are informed about changes to the product catalog.
-
-### API Gateway
-
-- **Endpoint Exposure**: The Product Service exposes endpoints through the API Gateway for client applications to interact with the product catalog. Integration with the API Gateway allows external systems and users to access the product catalog functionalities through a unified entry point.
+- **Cache Update**: A scheduled task updates the product cache every 2 hours to ensure data freshness. This is managed using Spring's `@Scheduled` annotation.
 
 ## Setup and Configuration
 
