@@ -58,9 +58,11 @@ public class ProductService {
                 .price(request.price())
                 .build();
 
+        product = productRepository.save(product);
+
         redisTemplate.opsForValue().set(PRODUCT_CACHE_KEY_PREFIX + product.getId(), product, timeToLive, TimeUnit.MINUTES);
 
-        ProductResponseDto responseDto = productMapper.toProductResponseDto(productRepository.save(product));
+        ProductResponseDto responseDto = productMapper.toProductResponseDto(product);
 
         kafkaTemplate.send(KafkaTopics.PRODUCT_CREATED_EVENT, responseDto);
 
@@ -125,7 +127,7 @@ public class ProductService {
 
         product = productRepository.save(product);
 
-        redisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + id);
+        redisTemplate.delete(PRODUCT_CACHE_KEY_PREFIX + product.getId());
 
         ProductResponseDto responseDto = productMapper.toProductResponseDto(product);
 
